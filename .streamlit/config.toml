@@ -1,0 +1,7 @@
+# Keep documents private: only this computer can open the app, and no usage data is sent.
+[server]
+address = "localhost"
+headless = true
+
+[browser]
+gatherUsageStats = false
