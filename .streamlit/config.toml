@@ -5,3 +5,6 @@ headless = true
 
 [browser]
 gatherUsageStats = false
+
+[client]
+toolbarMode = "viewer"  # hide developer menu and Deploy button

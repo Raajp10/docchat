@@ -3,6 +3,7 @@
 Run:  streamlit run app.py
 """
 import os
+import re
 
 import streamlit as st
 
@@ -108,23 +109,33 @@ if not ss.index:
     st.stop()
 
 
+def plain(text: str) -> str:
+    """Show document text as-is: escape markdown so '# Pricing' isn't a heading or '$89 … $149' math."""
+    return re.sub(r"([\\`*_{}\[\]<>()#+\-.!|$~])", r"\\\1", text)
+
+
+def no_math(text: str) -> str:
+    """Keep the AI's formatting, but stop dollar amounts from rendering as math."""
+    return text.replace("$", "\\$")
+
+
 def show_sources(hits):
     with st.expander(f"Sources ({len(hits)})"):
         for n, h in enumerate(hits, start=1):
             st.markdown(f"**[{n}] {h['label']}**")
-            st.caption(h["text"][:700] + ("…" if len(h["text"]) > 700 else ""))
+            st.caption(plain(h["text"][:700]) + ("…" if len(h["text"]) > 700 else ""))
 
 
 for m in ss.messages:
     with st.chat_message(m["role"]):
-        st.markdown(m["content"])
+        st.markdown(no_math(m["content"]))
         if m.get("sources"):
             show_sources(m["sources"])
 
 if q := st.chat_input("Ask about your documents…"):
     ss.messages.append({"role": "user", "content": q})
     with st.chat_message("user"):
-        st.markdown(q)
+        st.markdown(no_math(q))
 
     hits = ss.index.search(q, k=k)
     sources = [{"label": c.label(), "text": c.text} for c, _ in hits]
@@ -139,7 +150,9 @@ if q := st.chat_input("Ask about your documents…"):
             st.warning(answer)
         else:
             try:
-                answer = st.write_stream(stream_answer(provider, model, api_key, q, hits, history))
+                answer = st.write_stream(
+                    no_math(t) for t in stream_answer(provider, model, api_key, q, hits, history))
+                answer = answer.replace("\\$", "$")
             except Exception as e:
                 answer = f"Model error: {e}"
                 st.error(answer)
